@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 20% 4%;
+    --foreground: 250 30% 96%;
+    --card: 240 15% 12%;
+    --card-foreground: 250 30% 96%;
+    --popover: 240 15% 10%;
+    --popover-foreground: 250 30% 96%;
+    --primary: 248 88% 69%;
+    --primary-foreground: 250 30% 98%;
+    --secondary: 174 55% 56%;
+    --secondary-foreground: 240 20% 4%;
+    --muted: 250 10% 45%;
+    --muted-foreground: 250 10% 55%;
+    --accent: 248 88% 69%;
+    --accent-foreground: 250 30% 98%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 250 30% 98%;
+    --border: 240 12% 20%;
+    --input: 240 12% 20%;
+    --ring: 248 88% 69%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Slow dot grid background (CSS only) */
+.dot-grid-bg {
+  background-color: #0a0a0f;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(124, 106, 247, 0.12) 0,
+    rgba(124, 106, 247, 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 32px 32px;
+  animation: dotGridDrift 48s ease-in-out infinite;
+}
+
+@keyframes dotGridDrift {
+  0%,
+  100% {
+    background-position: 0 0;
+  }
+  33% {
+    background-position: 12px 8px;
+  }
+  66% {
+    background-position: -8px 14px;
+  }
+}
+
+.skeleton-shimmer {
+  @apply relative overflow-hidden rounded-md bg-card;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124, 106, 247, 0.08),
+    transparent
+  );
+  animation: shimmerSlide 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmerSlide {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer-light {
+  @apply relative overflow-hidden;
+}
+
+.skeleton-shimmer-light::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124, 106, 247, 0.14),
+    transparent
+  );
+  animation: shimmerSlide 1.4s ease-in-out infinite;
+}

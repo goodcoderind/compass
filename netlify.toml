@@ -1,0 +1,12 @@
+# Next.js on Netlify: use “Deploy from Git” (GitHub/GitLab), NOT drag-and-drop.
+# Drop deploy only works for static folders (e.g. pre-built `out/`); it will break this app.
+# Set OPENAI_API_KEY under Site settings → Environment variables.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
