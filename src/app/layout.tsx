@@ -21,7 +21,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "Compass — Your career, mapped.",
   description:
-    "AI-powered career coaching for resume reviews, roadmaps, portfolio projects, and learning plans.",
+    "AI-powered career coaching for resume reviews, job description analysis, LinkedIn optimization, interview prep, roadmaps, portfolio projects, and learning plans.",
   icons: {
     icon: "/favicon.svg",
   },

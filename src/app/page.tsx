@@ -4,10 +4,15 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  BriefcaseBusiness,
   CheckCircle2,
+  ClipboardList,
   FileCheck2,
+  FileSearch,
   Layers,
+  Linkedin,
   Map,
+  MessageSquareText,
   Sparkles,
   Target,
   Zap,
@@ -16,213 +21,336 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const heroStats = [
-  { label: "Coaching tools in one workspace", value: "4" },
-  { label: "Early-career professionals", value: "2,400+" },
-  { label: "Typical time to first output", value: "~2 min" },
+  { label: "Career tools in one workspace", value: "7" },
+  { label: "Account required", value: "0" },
+  { label: "Output styles", value: "Live + structured" },
 ];
 
 const toolPills = [
-  { name: "Resume Review", desc: "ATS-aware critique + rewrites" },
-  { name: "Roadmap Generator", desc: "Month-by-month plans" },
-  { name: "Portfolio Projects", desc: "Ideas that signal intent" },
-  { name: "Learning Plan", desc: "4-week structured study" },
+  { name: "Resume Review", desc: "ATS score + bullet rewrite" },
+  { name: "Roadmap Generator", desc: "Month-by-month path" },
+  { name: "Portfolio Projects", desc: "Proof-of-work ideas" },
+  { name: "Learning Plan", desc: "Four weeks of focused study" },
+  { name: "Interview Prep", desc: "Questions + answer frameworks" },
+  { name: "LinkedIn Optimizer", desc: "Before/after profile rewrite" },
+  { name: "JD Analyzer", desc: "Must-haves, keywords, red flags" },
 ];
 
-const featureCards = [
+const toolCards = [
   {
-    title: "Resume that passes ATS",
-    body: "Line-level feedback on keywords, structure, and impact so hiring systems and humans both see the same story — with a before/after bullet you can steal.",
+    title: "Resume Review",
+    body: "ATS alignment, strengths, improvements, and one sharper bullet you can paste back into your resume.",
     icon: FileCheck2,
+    accent: "text-accent",
   },
   {
-    title: "Roadmap built for your role",
-    body: "Milestones tied to skills employers actually ask for in your lane. Timelines you choose; specificity we bring.",
+    title: "Roadmap Generator",
+    body: "A month-by-month plan for a target role, with milestones, skills, and resources tied to your timeline.",
     icon: Map,
+    accent: "text-accent-secondary",
   },
   {
-    title: "Projects that actually impress",
-    body: "Portfolio ideas with recruiter rationale, difficulty tags, and skills called out — scoped to your stack and seniority.",
+    title: "Portfolio Projects",
+    body: "Project ideas scoped to your stack and level, with difficulty tags and recruiter-facing rationale.",
     icon: Sparkles,
+    accent: "text-accent",
   },
   {
-    title: "Learning plan you can execute",
-    body: "Weekly goals, real resources, and measurable milestones so progress is obvious, not vibes-based.",
+    title: "Learning Plan",
+    body: "Weekly goals, concrete resources, and measurable milestones so progress is visible instead of vague.",
     icon: BookOpen,
+    accent: "text-accent-secondary",
   },
+  {
+    title: "Interview Prep",
+    body: "Ten likely interview questions, answer frameworks, hidden evaluation signals, and one strong question to ask back.",
+    icon: MessageSquareText,
+    accent: "text-accent",
+  },
+  {
+    title: "LinkedIn Optimizer",
+    body: "A role-targeted headline, About section, and experience rewrite with missing keywords called out clearly.",
+    icon: Linkedin,
+    accent: "text-accent-secondary",
+  },
+  {
+    title: "JD Analyzer",
+    body: "A structured read of must-have skills, nice-to-haves, ATS keywords, likely questions, and real red flags.",
+    icon: FileSearch,
+    accent: "text-accent",
+  },
+];
+
+const workflow = [
+  {
+    title: "Decode the role",
+    body: "Start with the JD Analyzer to separate true requirements from nice-to-haves, pull exact keywords, and spot vague or risky signals.",
+    icon: FileSearch,
+  },
+  {
+    title: "Sharpen your story",
+    body: "Use Resume Review and LinkedIn Optimizer to make the same role-specific narrative show up across your application.",
+    icon: ClipboardList,
+  },
+  {
+    title: "Build credible proof",
+    body: "Generate portfolio projects and a learning plan that close the gap between where you are and what the role asks for.",
+    icon: BriefcaseBusiness,
+  },
+  {
+    title: "Walk in prepared",
+    body: "Use Interview Prep to practice the questions that are likely to come from the job description, not a random list.",
+    icon: MessageSquareText,
+  },
+];
+
+const outputExamples = [
+  "ATS score with three specific improvements",
+  "Before/after resume bullet rewrite",
+  "Month-by-month roadmap",
+  "Four portfolio project cards",
+  "Four-week learning schedule",
+  "Ten interview question cards",
+  "LinkedIn before/after sections",
+  "JD keyword checklist",
+  "Must-have vs nice-to-have skill split",
+  "Honest red-flag assessment",
 ];
 
 const differentiators = [
   {
-    title: "Field-aware, not generic",
-    body: "Prompts and outputs are tuned for real roles and constraints — not “10 tips to stand out.”",
+    title: "Role-specific by default",
+    body: "Compass asks for the role, the JD, your level, and your current material because career advice gets useful only when it has context.",
     icon: Target,
   },
   {
-    title: "Structured outputs",
-    body: "Timelines, cards, and sections you can copy into Notion or your calendar — not a wall of motivational text.",
+    title: "Structured where it matters",
+    body: "The newer tools return JSON-backed cards, badges, sections, checklists, and before/after panels instead of loose paragraphs.",
     icon: Layers,
   },
   {
-    title: "Fast iteration",
-    body: "Paste a resume, pick a tab, get direction in one session. No account maze, no PDF homework.",
+    title: "Fast enough to iterate",
+    body: "Run a JD, update your resume, rewrite LinkedIn, and generate interview prep in one sitting while the role is still fresh.",
     icon: Zap,
-  },
-];
-
-const steps = [
-  {
-    step: "01",
-    title: "Choose your lane",
-    body: "Open the product, pick Resume, Roadmap, Projects, or Learning — whatever is blocking you today.",
-  },
-  {
-    step: "02",
-    title: "Give context",
-    body: "Target role, stack, timeline, and honest skill level. The more specific you are, the sharper the map.",
-  },
-  {
-    step: "03",
-    title: "Act on the output",
-    body: "Copy sections, rewrite bullets, schedule milestones. Compass ends where your calendar begins.",
   },
 ];
 
 const audiences = [
   {
-    title: "Early-career & interns",
-    body: "Turn scattered coursework into a coherent story and a credible project list.",
+    title: "Students and interns",
+    body: "Turn coursework, projects, and early experience into a role-ready story without pretending you have senior credentials.",
   },
   {
-    title: "Career pivoters",
-    body: "Bridge old experience to a new title with language hiring managers recognize.",
+    title: "Career switchers",
+    body: "Translate older experience into the vocabulary of the role you want next, then plan the proof you still need to build.",
   },
   {
-    title: "Leveling up ICs",
-    body: "Tighten your resume and learning plan before you interview for the next band.",
+    title: "Early-career professionals",
+    body: "Tighten your application package before you apply, then prepare for the questions your resume and the JD will create.",
   },
 ];
 
-const focusCards = [
+const proofCards = [
   {
-    headline: "Feedback that matches the role",
-    body: "Not just “add metrics” — structure and wording that fit how your lane actually reads CVs and portfolios.",
+    headline: "No mystery meat output",
+    body: "Sections are named. Cards are separated. Copy buttons are available where you need them. You can see what each answer is trying to do.",
   },
   {
-    headline: "Plans you can put on a calendar",
-    body: "Roadmaps and learning weeks are built to become dates and tasks — not inspiration you forget after closing the tab.",
+    headline: "Honest about uncertainty",
+    body: "The JD Analyzer does not manufacture red flags. If the description looks solid, it says so cleanly.",
   },
 ];
-
-const avatars = [1, 2, 3, 4, 5];
 
 export default function HomePage() {
   return (
     <div className="relative overflow-hidden">
-      {/* Hero */}
       <section className="dot-grid-bg relative border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:py-32">
-          <div className="grid gap-12 lg:grid-cols-[1fr_minmax(0,340px)] lg:items-end lg:gap-16">
-            <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                Compass — Your career, mapped.
-              </p>
-              <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-                Your career,
-                <br />
-                <span className="font-serif text-5xl italic text-foreground sm:text-6xl md:text-7xl">
-                  mapped.
-                </span>
-              </h1>
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
-                An AI coach that respects your field: resume critique, roadmaps,
-                portfolio ideas, and learning plans — structured, copyable, and
-                blunt when it needs to be.
-              </p>
-              <div className="mt-10 flex flex-wrap gap-3">
-                <Button asChild size="lg">
-                  <Link href="/app">Start for free</Link>
-                </Button>
-                <Button asChild variant="ghost" size="lg">
-                  <Link href="/app" className="gap-2">
-                    Open the product
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-muted">
+              Compass — your career, mapped.
+            </p>
+            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+              Compass career toolkit
+              <span className="block font-serif text-5xl italic text-foreground sm:text-6xl md:text-7xl">
+                for the whole job search.
+              </span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
+              A focused AI workspace for resume reviews, job description
+              analysis, LinkedIn rewrites, interview prep, portfolio ideas,
+              roadmaps, and learning plans. Less vague advice. More artifacts
+              you can use today.
+            </p>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href="/app">Start for free</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/app" className="gap-2">
+                  Open the product
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
-            <dl className="grid animate-in fade-in slide-in-from-bottom-2 gap-6 rounded-xl border border-border bg-surface/80 p-6 backdrop-blur-sm duration-500 sm:grid-cols-3 lg:grid-cols-1 lg:p-8">
-              {heroStats.map((s) => (
-                <div key={s.label} className="border-b border-border pb-6 last:border-0 last:pb-0 lg:border-b lg:pb-6">
-                  <dt className="text-xs font-medium uppercase tracking-wider text-muted">
-                    {s.label}
-                  </dt>
-                  <dd className="mt-2 font-serif text-3xl italic text-foreground">
-                    {s.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
           </div>
 
-          <div className="mt-14 flex flex-wrap gap-2 border-t border-border/60 pt-10 animate-in fade-in duration-500 delay-150">
+          <dl className="mt-14 grid animate-in fade-in gap-4 duration-500 delay-150 sm:grid-cols-3">
+            {heroStats.map((s) => (
+              <div
+                key={s.label}
+                className="rounded-lg border border-border bg-surface/80 p-5 backdrop-blur-sm"
+              >
+                <dt className="text-xs font-medium uppercase tracking-wider text-muted">
+                  {s.label}
+                </dt>
+                <dd className="mt-2 font-serif text-3xl italic text-foreground">
+                  {s.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-10 flex flex-wrap gap-2 border-t border-border/60 pt-10 animate-in fade-in duration-500 delay-200">
             <span className="me-2 w-full text-xs font-medium uppercase tracking-wider text-muted sm:w-auto sm:me-4">
               Inside the app
             </span>
-            {toolPills.map((t) => (
+            {toolPills.map((tool) => (
               <span
-                key={t.name}
+                key={tool.name}
                 className="inline-flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-foreground/90"
-                title={t.desc}
+                title={tool.desc}
               >
-                <span className="font-medium">{t.name}</span>
-                <span className="hidden text-muted sm:inline">· {t.desc}</span>
+                <span className="font-medium">{tool.name}</span>
+                <span className="hidden text-muted sm:inline">
+                  · {tool.desc}
+                </span>
               </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Feature grid */}
       <section className="border-b border-border bg-surface/40 py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mb-12 max-w-2xl">
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent-secondary">
-              What you get
+              The toolkit
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Four tools. One point of view: your next move should be obvious.
+              Seven tools that cover the application loop.
             </h2>
             <p className="mt-4 text-muted">
-              Each tab is built to produce something you can ship — a revised
-              bullet, a month label on your calendar, a project spec, or a week
-              of study you can defend in an interview.
+              Compass is built around the real sequence: understand the role,
+              align your profile, build proof, and prepare for the conversation.
             </p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            {featureCards.map((f) => (
-              <div key={f.title}>
-                <Card className="h-full border-border bg-card transition-shadow duration-200 hover:shadow-card-hover">
-                  <CardContent className="p-6 sm:p-7">
-                    <f.icon
-                      className="mb-5 h-9 w-9 text-accent"
-                      strokeWidth={1.35}
-                    />
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {f.title}
-                    </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-muted">
-                      {f.body}
-                    </p>
-                  </CardContent>
-                </Card>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {toolCards.map((tool) => (
+              <Card
+                key={tool.title}
+                className="h-full border-border bg-card transition-shadow duration-200 hover:shadow-card-hover"
+              >
+                <CardContent className="p-6">
+                  <tool.icon
+                    className={`mb-5 h-8 w-8 ${tool.accent}`}
+                    strokeWidth={1.4}
+                  />
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {tool.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted">
+                    {tool.body}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-border py-16 sm:py-24">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+              A better flow
+            </p>
+            <h2 className="mt-3 font-serif text-3xl italic leading-snug text-foreground sm:text-4xl">
+              Stop treating each career task like a separate island.
+            </h2>
+            <p className="mt-6 text-muted">
+              A job description should influence your resume. Your resume should
+              influence your interview prep. Your skill gaps should influence
+              your projects and learning plan. Compass connects those moves in
+              one place.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild>
+                <Link href="/app">Try the workflow</Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <Link href="/about">Read the philosophy</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {workflow.map((step, index) => (
+              <div
+                key={step.title}
+                className="flex gap-4 rounded-lg border border-border bg-card p-5 transition-colors duration-200 hover:border-muted"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-accent">
+                  <step.icon className="h-5 w-5" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted">
+                    Step {index + 1}
+                  </p>
+                  <h3 className="mt-1 font-semibold text-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {step.body}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Differentiators */}
+      <section className="border-b border-border bg-surface/40 py-16 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent-secondary">
+                Concrete output
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                The app returns things you can act on.
+              </h2>
+            </div>
+            <p className="max-w-md text-sm leading-relaxed text-muted">
+              Some tools stream live guidance. The new interview, LinkedIn, and
+              JD tools render structured cards and checklists for easier use.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {outputExamples.map((item) => (
+              <div
+                key={item}
+                className="flex min-h-20 items-start gap-3 rounded-lg border border-border bg-card p-4"
+              >
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-secondary" />
+                <p className="text-sm leading-relaxed text-foreground/90">
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="border-b border-border py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
@@ -231,29 +359,30 @@ export default function HomePage() {
                 Why Compass
               </p>
               <h2 className="mt-3 font-serif text-3xl italic leading-snug text-foreground sm:text-4xl">
-                Templates tell you what to write. We tell you what to fix.
+                Templates tell you what to write. Compass helps you decide what
+                to change.
               </h2>
               <p className="mt-6 text-muted">
                 Most career products optimize for volume: more documents, more
-                tabs, more “inspiration.” Compass optimizes for clarity — fewer
-                moves, higher leverage, language that matches how hiring
-                actually works in your discipline.
+                templates, more generic tips. Compass optimizes for clarity:
+                fewer moves, better alignment, and sharper language around the
+                role you actually want.
               </p>
             </div>
             <ul className="space-y-4">
-              {differentiators.map((d) => (
+              {differentiators.map((item) => (
                 <li
-                  key={d.title}
+                  key={item.title}
                   className="flex gap-4 rounded-lg border border-border bg-card p-5 transition-colors duration-200 hover:border-muted"
                 >
-                  <d.icon
+                  <item.icon
                     className="mt-0.5 h-5 w-5 shrink-0 text-accent-secondary"
                     strokeWidth={1.5}
                   />
                   <div>
-                    <p className="font-medium text-foreground">{d.title}</p>
+                    <p className="font-medium text-foreground">{item.title}</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted">
-                      {d.body}
+                      {item.body}
                     </p>
                   </div>
                 </li>
@@ -263,62 +392,33 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
       <section className="border-b border-border bg-surface/40 py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <p className="text-center text-xs font-medium uppercase tracking-[0.2em] text-muted">
-            How it works
-          </p>
-          <h2 className="mx-auto mt-3 max-w-xl text-center text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Three steps. No workbook.
-          </h2>
-          <div className="mx-auto mt-14 grid max-w-4xl gap-8 md:grid-cols-3">
-            {steps.map((s) => (
-              <div
-                key={s.step}
-                className="relative text-center md:text-left"
-              >
-                <span className="font-serif text-4xl italic text-accent/90">
-                  {s.step}
-                </span>
-                <h3 className="mt-4 text-base font-semibold text-foreground">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {s.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Audiences */}
-      <section className="border-b border-border py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                Who it&apos;s for
+                Who it is for
               </p>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                Serious about the next chapter.
+                People who want a sharper next move.
               </h2>
             </div>
             <Button asChild variant="outline" className="w-fit shrink-0">
-              <Link href="/about">Read our philosophy</Link>
+              <Link href="/about">About Compass</Link>
             </Button>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
-            {audiences.map((a) => (
+            {audiences.map((audience) => (
               <div
-                key={a.title}
-                className="rounded-xl border border-border bg-card p-6"
+                key={audience.title}
+                className="rounded-lg border border-border bg-card p-6"
               >
                 <CheckCircle2 className="mb-4 h-5 w-5 text-accent-secondary" />
-                <h3 className="font-semibold text-foreground">{a.title}</h3>
+                <h3 className="font-semibold text-foreground">
+                  {audience.title}
+                </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {a.body}
+                  {audience.body}
                 </p>
               </div>
             ))}
@@ -326,66 +426,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Social proof + focus */}
-      <section className="border-b border-border bg-surface/40 py-16 sm:py-24">
+      <section className="border-b border-border py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:gap-16">
-            <div className="flex flex-col items-center gap-4 lg:items-start">
-              <div className="flex -space-x-2">
-                {avatars.map((n) => (
-                  <div
-                    key={n}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-surface bg-card text-xs font-medium text-muted ring-1 ring-border"
-                    aria-hidden
-                  >
-                    {String.fromCharCode(64 + n)}
-                  </div>
-                ))}
+          <div className="grid gap-6 md:grid-cols-2">
+            {proofCards.map((card) => (
+              <div
+                key={card.headline}
+                className="rounded-lg border border-border bg-card p-6 sm:p-8"
+              >
+                <p className="font-serif text-xl italic leading-snug text-foreground/95">
+                  {card.headline}
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-muted">
+                  {card.body}
+                </p>
               </div>
-              <p className="max-w-xs text-center text-sm text-muted lg:text-left">
-                Trusted by{" "}
-                <span className="font-medium text-foreground">
-                  2,400+ early-career professionals
-                </span>{" "}
-                who wanted a plan, not another template library.
-              </p>
-            </div>
-            <div className="grid flex-1 gap-6 sm:grid-cols-2">
-              {focusCards.map((c) => (
-                <div
-                  key={c.headline}
-                  className="rounded-xl border border-border bg-card p-6"
-                >
-                  <p className="font-serif text-lg italic leading-snug text-foreground/95">
-                    {c.headline}
-                  </p>
-                  <p className="mt-4 text-sm leading-relaxed text-muted">
-                    {c.body}
-                  </p>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="rounded-2xl border border-border bg-card px-8 py-12 text-center sm:px-12 sm:py-16">
-            <h2 className="mx-auto max-w-lg font-serif text-3xl italic leading-snug text-foreground sm:text-4xl">
-              Ready to see your career on one page?
+            <h2 className="mx-auto max-w-2xl font-serif text-3xl italic leading-snug text-foreground sm:text-4xl">
+              Bring one role. Leave with a clearer application plan.
             </h2>
-            <p className="mx-auto mt-4 max-w-md text-sm text-muted">
-              Open the product, pick a tool, and paste your context. Your first
-              useful output is minutes away.
+            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted">
+              Paste a job description, run the tools that match your blocker,
+              and turn scattered career work into a sequence you can actually
+              execute.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
-                <Link href="/app">Get started</Link>
+                <Link href="/app">Open Compass</Link>
               </Button>
               <Button asChild variant="ghost" size="lg">
-                <Link href="/about">About Compass</Link>
+                <Link href="/about">Learn more</Link>
               </Button>
             </div>
           </div>

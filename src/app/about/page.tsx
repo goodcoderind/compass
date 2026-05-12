@@ -56,6 +56,21 @@ const productSurface = [
     detail:
       "A four-week plan with weekly goals, concrete resources, and a milestone you can verify.",
   },
+  {
+    name: "Interview Prep",
+    detail:
+      "Ten role-specific interview questions, answer frameworks, what the interviewer is testing, and one smart question to ask back.",
+  },
+  {
+    name: "LinkedIn Optimizer",
+    detail:
+      "Before-and-after rewrites for your headline, About section, and recent experience, plus missing keywords for your target role.",
+  },
+  {
+    name: "JD Analyzer",
+    detail:
+      "A clean breakdown of must-have skills, nice-to-haves, ATS keywords, likely interview questions, and real red flags if they exist.",
+  },
 ];
 
 export default function AboutPage() {
@@ -105,10 +120,11 @@ export default function AboutPage() {
               their constraints, and next steps they can schedule on a calendar.
             </p>
             <p>
-              No fluff. No filler. Real coaching, on demand: resume critique
-              that names missing signals, roadmaps that respect your timeline,
-              projects that read as deliberate practice instead of tutorial
-              churn.
+              No fluff. No filler. Real coaching, on demand: JD analysis that
+              names the actual signals, resume critique that sharpens your
+              story, LinkedIn rewrites that match the role, interview prep tied
+              to the job, roadmaps that respect your timeline, and projects
+              that read as deliberate practice instead of tutorial churn.
             </p>
             <p>
               Your career is not a checklist. Stop treating it like one. Compass
@@ -157,11 +173,11 @@ export default function AboutPage() {
                 The product
               </p>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                Four surfaces, one coach.
+                Seven surfaces, one coach.
               </h2>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {productSurface.map((p) => (
               <div
                 key={p.name}
