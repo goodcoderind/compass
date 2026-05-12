@@ -1,7 +1,14 @@
 import OpenAI from "openai";
 import { NextRequest } from "next/server";
 
-export type CareerTool = "resume" | "roadmap" | "projects" | "learning";
+export type CareerTool =
+  | "resume"
+  | "roadmap"
+  | "projects"
+  | "learning"
+  | "interview"
+  | "linkedin"
+  | "jdanalyzer";
 
 type Payload = Record<string, unknown>;
 
@@ -60,6 +67,69 @@ Week by week: goals, specific resources, measurable milestone.
 Respond with ONLY valid JSON (no markdown fences) in this exact shape:
 {"weeks":[{"week":1,"goals":["..."],"resources":[{"title":"...","detail":"..."}],"milestone":"..."}]}`;
 
+    case "interview":
+      return `Generate interview prep for someone targeting 
+${payload.role} at ${payload.level} experience level.
+Job description: ${payload.jd}
+
+Return JSON only, no markdown, no preamble:
+{
+  "questions": [
+    { 
+      "question": "string", 
+      "howToAnswer": "string", 
+      "type": "Behavioural" | "Technical" | "Situational" 
+    }
+  ],
+  "theyAreTesting": [
+    { "title": "string", "explanation": "string" }
+  ],
+  "questionToAsk": { "question": "string", "whyItWorks": "string" }
+}
+
+The questions array must contain exactly 10 items.
+The theyAreTesting array must contain exactly 3 items.`;
+
+    case "linkedin":
+      return `Optimize this LinkedIn profile for someone 
+targeting ${payload.role}.
+
+Current headline: ${payload.headline}
+Current about: ${payload.about}
+Current experience: ${payload.experience}
+
+Return JSON only, no markdown, no preamble:
+{
+  "headline": { "current": "string", "optimized": "string" },
+  "about": { "current": "string", "optimized": "string" },
+  "experience": { "current": "string", "optimized": "string" },
+  "missingKeywords": [
+    { "keyword": "string", "whyItMatters": "string" }
+  ]
+}
+
+The missingKeywords array must contain exactly 3 items.`;
+
+    case "jdanalyzer":
+      return `Analyze this job description for the role of ${payload.role}.
+
+JD: ${payload.jd}
+
+Return JSON only, no markdown, no preamble:
+{
+  "mustHave": ["string"],
+  "niceToHave": ["string"],
+  "keywords": ["string"],
+  "expectedQuestions": ["string"],
+  "redFlags": ["string"]
+}
+
+The mustHave array must contain 5-7 items.
+The niceToHave array must contain 3-5 items.
+The keywords array must contain 8-12 exact phrases from the JD.
+The expectedQuestions array must contain 4-5 items.
+The redFlags array must contain 0-4 items and must be empty if there are no real red flags.`;
+
     default:
       return String(payload.message ?? "");
   }
@@ -88,7 +158,15 @@ export async function POST(req: NextRequest) {
 
   const tool = body.tool;
   const payload = body.payload ?? {};
-  const validTools: CareerTool[] = ["resume", "roadmap", "projects", "learning"];
+  const validTools: CareerTool[] = [
+    "resume",
+    "roadmap",
+    "projects",
+    "learning",
+    "interview",
+    "linkedin",
+    "jdanalyzer",
+  ];
   if (!tool || !validTools.includes(tool as CareerTool)) {
     return new Response(JSON.stringify({ error: "Invalid or missing tool." }), {
       status: 400,
@@ -102,6 +180,34 @@ export async function POST(req: NextRequest) {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  const jsonTools: CareerTool[] = ["interview", "linkedin", "jdanalyzer"];
+  if (jsonTools.includes(tool as CareerTool)) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        stream: false,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+      });
+      const content = completion.choices[0]?.message?.content ?? "";
+      return new Response(content, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Request failed.";
+      return new Response(JSON.stringify({ error: message }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }
 
   let stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;

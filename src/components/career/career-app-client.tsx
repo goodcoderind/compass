@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import {
+  FileSearch,
+  Linkedin,
+  MessageSquareText,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +30,22 @@ import {
   LearningWeeksPanel,
   type LearningWeek,
 } from "@/components/career/learning-weeks-panel";
+import {
+  InterviewPrepOutput,
+  InterviewPrepSkeleton,
+  JdAnalyzerOutput,
+  JdAnalyzerSkeleton,
+  LinkedInOptimizerOutput,
+  LinkedInOptimizerSkeleton,
+  StructuredEmptyState,
+  StructuredToolOutputCard,
+  interviewPrepToCopy,
+  jdAnalysisToCopy,
+  linkedInOptimizationToCopy,
+  type InterviewPrepData,
+  type JdAnalysisData,
+  type LinkedInOptimizationData,
+} from "@/components/career/structured-career-tools";
 import { parseResumeFromMarkdown } from "@/lib/parse-resume-output";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +128,37 @@ async function streamCareer(
   return { ok: true, text: acc };
 }
 
+async function fetchCareerJson<T>(
+  tool: string,
+  payload: Record<string, unknown>
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  const res = await fetch("/api/career", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tool, payload }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    const parsedError = tryParseJsonObject<{ error?: string }>(text);
+    return {
+      ok: false,
+      error:
+        typeof parsedError?.error === "string"
+          ? parsedError.error
+          : "Something went wrong.",
+    };
+  }
+  const data = tryParseJsonObject<T>(text);
+  if (!data) {
+    return {
+      ok: false,
+      error:
+        "Compass returned a response I could not read. Please try again.",
+    };
+  }
+  return { ok: true, data };
+}
+
 export function CareerAppClient() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -121,7 +173,7 @@ export function CareerAppClient() {
       </div>
 
       <Tabs defaultValue="resume" className="w-full">
-        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-max min-w-full justify-start sm:w-full sm:min-w-0">
             <TabsTrigger
               value="resume"
@@ -147,6 +199,24 @@ export function CareerAppClient() {
             >
               Learning Plan
             </TabsTrigger>
+            <TabsTrigger
+              value="interview"
+              className="px-2.5 text-xs sm:flex-1 sm:px-3 sm:text-sm"
+            >
+              Interview Prep
+            </TabsTrigger>
+            <TabsTrigger
+              value="linkedin"
+              className="px-2.5 text-xs sm:flex-1 sm:px-3 sm:text-sm"
+            >
+              LinkedIn Optimizer
+            </TabsTrigger>
+            <TabsTrigger
+              value="jdanalyzer"
+              className="px-2.5 text-xs sm:flex-1 sm:px-3 sm:text-sm"
+            >
+              JD Analyzer
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -161,6 +231,15 @@ export function CareerAppClient() {
         </TabsContent>
         <TabsContent value="learning">
           <LearningTab />
+        </TabsContent>
+        <TabsContent value="interview">
+          <InterviewPrepTab />
+        </TabsContent>
+        <TabsContent value="linkedin">
+          <LinkedInOptimizerTab />
+        </TabsContent>
+        <TabsContent value="jdanalyzer">
+          <JdAnalyzerTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -641,6 +720,359 @@ function LearningTab() {
               </p>
             )}
           </ToolOutputCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InterviewPrepTab() {
+  const [targetRole, setTargetRole] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("");
+  const [prep, setPrep] = useState<InterviewPrepData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [responseId, setResponseId] = useState(0);
+
+  const reset = useCallback(() => {
+    setTargetRole("");
+    setJobDescription("");
+    setExperienceLevel("");
+    setPrep(null);
+    setError("");
+    setResponseId((n) => n + 1);
+  }, []);
+
+  async function generate() {
+    setError("");
+    setPrep(null);
+    setResponseId((n) => n + 1);
+    if (!targetRole.trim() || !jobDescription.trim() || !experienceLevel) {
+      setError("Add the target role, job description, and experience level.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await fetchCareerJson<InterviewPrepData>("interview", {
+        role: targetRole,
+        jd: jobDescription,
+        level: experienceLevel,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPrep(result.data);
+    } catch {
+      setError("Network error. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="ip-role">Target role</Label>
+          <Input
+            id="ip-role"
+            placeholder="e.g. Product manager, AI tooling"
+            value={targetRole}
+            onChange={(e) => setTargetRole(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ip-jd">Job description</Label>
+          <Textarea
+            id="ip-jd"
+            placeholder="Paste the JD here."
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            className="min-h-[220px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Your experience level</Label>
+          <Select value={experienceLevel} onValueChange={setExperienceLevel}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Student">Student</SelectItem>
+              <SelectItem value="1-2 years">1-2 years</SelectItem>
+              <SelectItem value="3-5 years">3-5 years</SelectItem>
+              <SelectItem value="5+ years">5+ years</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="button" onClick={generate} disabled={loading}>
+          {loading ? "Generating…" : "Generate interview prep"}
+        </Button>
+        {error ? (
+          <p className="text-sm text-red-400/90" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+
+      <div>
+        {loading ? (
+          <InterviewPrepSkeleton />
+        ) : (
+          <StructuredToolOutputCard
+            animationKey={responseId}
+            textToCopy={prep ? interviewPrepToCopy(prep) : ""}
+            onStartOver={reset}
+            disabledCopy={!prep}
+          >
+            {prep ? (
+              <InterviewPrepOutput data={prep} />
+            ) : (
+              <StructuredEmptyState
+                icon={MessageSquareText}
+                text="Your tailored interview questions, answer frameworks, hidden evaluation signals, and one smart question to ask will appear here."
+              />
+            )}
+          </StructuredToolOutputCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LinkedInOptimizerTab() {
+  const [targetRole, setTargetRole] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [about, setAbout] = useState("");
+  const [experience, setExperience] = useState("");
+  const [optimization, setOptimization] =
+    useState<LinkedInOptimizationData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [responseId, setResponseId] = useState(0);
+
+  const reset = useCallback(() => {
+    setTargetRole("");
+    setHeadline("");
+    setAbout("");
+    setExperience("");
+    setOptimization(null);
+    setError("");
+    setResponseId((n) => n + 1);
+  }, []);
+
+  async function optimize() {
+    setError("");
+    setOptimization(null);
+    setResponseId((n) => n + 1);
+    if (
+      !targetRole.trim() ||
+      !headline.trim() ||
+      !about.trim() ||
+      !experience.trim()
+    ) {
+      setError("Add the role, headline, About section, and recent experience.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await fetchCareerJson<LinkedInOptimizationData>(
+        "linkedin",
+        {
+          role: targetRole,
+          headline,
+          about,
+          experience,
+        }
+      );
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setOptimization(result.data);
+    } catch {
+      setError("Network error. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="li-role">Target role you want to attract</Label>
+          <Input
+            id="li-role"
+            placeholder="e.g. Data analyst, healthcare analytics"
+            value={targetRole}
+            onChange={(e) => setTargetRole(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="li-headline">Current LinkedIn headline</Label>
+          <Textarea
+            id="li-headline"
+            placeholder="Paste your current headline."
+            value={headline}
+            onChange={(e) => setHeadline(e.target.value)}
+            className="min-h-[90px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="li-about">Current LinkedIn About section</Label>
+          <Textarea
+            id="li-about"
+            placeholder="Paste your current About section."
+            value={about}
+            onChange={(e) => setAbout(e.target.value)}
+            className="min-h-[150px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="li-experience">
+            Current LinkedIn Experience (paste your most recent role)
+          </Label>
+          <Textarea
+            id="li-experience"
+            placeholder="Paste your most recent role."
+            value={experience}
+            onChange={(e) => setExperience(e.target.value)}
+            className="min-h-[150px]"
+          />
+        </div>
+        <Button type="button" onClick={optimize} disabled={loading}>
+          {loading ? "Optimizing…" : "Optimize my LinkedIn"}
+        </Button>
+        {error ? (
+          <p className="text-sm text-red-400/90" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+
+      <div>
+        {loading ? (
+          <LinkedInOptimizerSkeleton />
+        ) : (
+          <StructuredToolOutputCard
+            animationKey={responseId}
+            textToCopy={
+              optimization ? linkedInOptimizationToCopy(optimization) : ""
+            }
+            onStartOver={reset}
+            disabledCopy={!optimization}
+          >
+            {optimization ? (
+              <LinkedInOptimizerOutput data={optimization} />
+            ) : (
+              <StructuredEmptyState
+                icon={Linkedin}
+                text="Your profile rewrite will appear as before-and-after sections, plus the three keywords your target role expects to see."
+              />
+            )}
+          </StructuredToolOutputCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function JdAnalyzerTab() {
+  const [role, setRole] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [analysis, setAnalysis] = useState<JdAnalysisData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [responseId, setResponseId] = useState(0);
+
+  const reset = useCallback(() => {
+    setRole("");
+    setJobDescription("");
+    setAnalysis(null);
+    setError("");
+    setResponseId((n) => n + 1);
+  }, []);
+
+  async function analyze() {
+    setError("");
+    setAnalysis(null);
+    setResponseId((n) => n + 1);
+    if (!role.trim() || !jobDescription.trim()) {
+      setError("Add the role and full job description.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await fetchCareerJson<JdAnalysisData>("jdanalyzer", {
+        role,
+        jd: jobDescription,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setAnalysis(result.data);
+    } catch {
+      setError("Network error. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="jd-role">Role you&apos;re applying for</Label>
+          <Input
+            id="jd-role"
+            placeholder="e.g. Customer success manager"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="jd-text">Paste the full job description</Label>
+          <Textarea
+            id="jd-text"
+            placeholder="Paste the full JD here."
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            className="min-h-[280px]"
+          />
+        </div>
+        <Button type="button" onClick={analyze} disabled={loading}>
+          {loading ? "Analyzing…" : "Analyze this JD"}
+        </Button>
+        {error ? (
+          <p className="text-sm text-red-400/90" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+
+      <div>
+        {loading ? (
+          <JdAnalyzerSkeleton />
+        ) : (
+          <StructuredToolOutputCard
+            animationKey={responseId}
+            textToCopy={analysis ? jdAnalysisToCopy(analysis) : ""}
+            onStartOver={reset}
+            disabledCopy={!analysis}
+          >
+            {analysis ? (
+              <JdAnalyzerOutput data={analysis} />
+            ) : (
+              <StructuredEmptyState
+                icon={FileSearch}
+                text="The JD breakdown will separate must-have skills, nice-to-haves, ATS keywords, likely questions, and any real red flags."
+              />
+            )}
+          </StructuredToolOutputCard>
         )}
       </div>
     </div>
