@@ -1,11 +1,19 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Clock,
+  Database,
   FileSearch,
   Linkedin,
+  LogIn,
+  LogOut,
   MessageSquareText,
+  Save,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +56,16 @@ import {
 } from "@/components/career/structured-career-tools";
 import { parseResumeFromMarkdown } from "@/lib/parse-resume-output";
 import { cn } from "@/lib/utils";
+import {
+  createWorkTitle,
+  toolLabels,
+  type CareerWorkTool,
+  type SavedCareerWork,
+} from "@/lib/career-work";
+import {
+  isSupabaseBrowserConfigured,
+  supabaseBrowser,
+} from "@/lib/supabase-client";
 
 function roadmapToCopy(months: RoadmapMonth[]): string {
   return months
@@ -159,7 +177,277 @@ async function fetchCareerJson<T>(
   return { ok: true, data };
 }
 
+type SaveCareerWorkArgs = {
+  tool: CareerWorkTool;
+  title?: string;
+  input: Record<string, unknown>;
+  output: unknown;
+};
+
+type SaveCareerWork = (args: SaveCareerWorkArgs) => Promise<{
+  ok: boolean;
+  error?: string;
+}>;
+
+type AuthMessageTone = "info" | "success" | "error";
+
+type CareerTabProps = {
+  canSave: boolean;
+  saveWork: SaveCareerWork;
+  getAccessToken: () => Promise<string | null>;
+};
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(date));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getSavedArray<T>(output: unknown, key: string): T[] | null {
+  if (!isRecord(output) || !Array.isArray(output[key])) return null;
+  return output[key] as T[];
+}
+
+function formatSavedOutput(item: SavedCareerWork): string {
+  const { output } = item;
+  if (typeof output === "string") return output;
+
+  switch (item.tool) {
+    case "roadmap": {
+      const months = getSavedArray<RoadmapMonth>(output, "months");
+      if (months?.length) return roadmapToCopy(months);
+      break;
+    }
+    case "projects": {
+      const projects = getSavedArray<ProjectItem>(output, "projects");
+      if (projects?.length) return projectsToCopy(projects);
+      break;
+    }
+    case "learning": {
+      const weeks = getSavedArray<LearningWeek>(output, "weeks");
+      if (weeks?.length) return learningToCopy(weeks);
+      break;
+    }
+    case "interview":
+      if (isRecord(output) && Array.isArray(output.questions)) {
+        return interviewPrepToCopy(output as InterviewPrepData);
+      }
+      break;
+    case "linkedin":
+      if (isRecord(output) && isRecord(output.headline)) {
+        return linkedInOptimizationToCopy(output as LinkedInOptimizationData);
+      }
+      break;
+    case "jdanalyzer":
+      if (isRecord(output) && Array.isArray(output.mustHave)) {
+        return jdAnalysisToCopy(output as JdAnalysisData);
+      }
+      break;
+    case "resume":
+      break;
+  }
+
+  return JSON.stringify(output, null, 2);
+}
+
+async function copySavedOutput(item: SavedCareerWork) {
+  try {
+    const text = `${item.title}\n${toolLabels[item.tool]}\n\n${formatSavedOutput(
+      item
+    )}`;
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* ignore clipboard failures */
+  }
+}
+
 export function CareerAppClient() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [authMessageTone, setAuthMessageTone] =
+    useState<AuthMessageTone>("info");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [savedItems, setSavedItems] = useState<SavedCareerWork[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
+
+  const canSave = Boolean(isSupabaseBrowserConfigured && session);
+
+  const getAccessToken = useCallback(async () => {
+    if (!supabaseBrowser) return null;
+    const { data } = await supabaseBrowser.auth.getSession();
+    return data.session?.access_token ?? null;
+  }, []);
+
+  const loadSavedItems = useCallback(async () => {
+    const token = await getAccessToken();
+    if (!token) {
+      setSavedItems([]);
+      return;
+    }
+    setSavedLoading(true);
+    try {
+      const res = await fetch("/api/work-items", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        items?: SavedCareerWork[];
+        configured?: boolean;
+        error?: string;
+      };
+      if (!res.ok) {
+        setSaveStatus(data.error ?? "Could not load saved work.");
+        return;
+      }
+      if (data.configured === false) {
+        setSaveStatus("Server Supabase keys are missing. Outputs cannot save yet.");
+      }
+      setSavedItems(data.items ?? []);
+    } finally {
+      setSavedLoading(false);
+    }
+  }, [getAccessToken]);
+
+  const saveWork = useCallback<SaveCareerWork>(
+    async ({ tool, title, input, output }) => {
+      setSaveStatus("Saving output…");
+      const token = await getAccessToken();
+      if (!token) {
+        const error = "Sign in before running a tool to save outputs.";
+        setSaveStatus(error);
+        return { ok: false, error };
+      }
+      const res = await fetch("/api/work-items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tool,
+          title: title || createWorkTitle(tool, input),
+          input,
+          output,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        item?: SavedCareerWork;
+        error?: string;
+      };
+      if (!res.ok) {
+        const error = data.error ?? "Could not save this output.";
+        setSaveStatus(`Save failed: ${error}`);
+        return { ok: false, error };
+      }
+      if (data.item) {
+        setSavedItems((items) => [data.item as SavedCareerWork, ...items]);
+        setSaveStatus("Saved to My Work.");
+        return { ok: true };
+      }
+      const error = "Saved response did not include an item.";
+      setSaveStatus(`Save failed: ${error}`);
+      return { ok: false, error };
+    },
+    [getAccessToken]
+  );
+
+  const deleteSavedItem = useCallback(
+    async (id: string) => {
+      const token = await getAccessToken();
+      if (!token) return;
+      const res = await fetch(`/api/work-items?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setSavedItems((items) => items.filter((item) => item.id !== id));
+      }
+    },
+    [getAccessToken]
+  );
+
+  useEffect(() => {
+    if (!supabaseBrowser) return;
+
+    supabaseBrowser.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null);
+    });
+
+    const { data } = supabaseBrowser.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      void loadSavedItems();
+    } else {
+      setSavedItems([]);
+    }
+  }, [loadSavedItems, session]);
+
+  async function signIn() {
+    setAuthMessage("");
+    setAuthMessageTone("info");
+    if (!supabaseBrowser) {
+      setAuthMessageTone("error");
+      setAuthMessage("Add Supabase environment variables to enable sign in.");
+      return;
+    }
+    const email = authEmail.trim();
+    if (!email) {
+      setAuthMessageTone("error");
+      setAuthMessage("Enter your email to get a magic link.");
+      return;
+    }
+    setAuthLoading(true);
+    setAuthMessage("Sending magic link...");
+    try {
+      const { error } = await supabaseBrowser.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo:
+            typeof window !== "undefined"
+              ? `${window.location.origin}/app`
+              : undefined,
+        },
+      });
+      if (error) {
+        setAuthMessageTone("error");
+        setAuthMessage(`Sign in failed: ${error.message}`);
+        return;
+      }
+      setAuthMessageTone("success");
+      setAuthMessage("Magic link sent. Check your email.");
+    } catch (error) {
+      setAuthMessageTone("error");
+      setAuthMessage(
+        error instanceof Error
+          ? `Sign in failed: ${error.message}`
+          : "Sign in failed. Please try again."
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function signOut() {
+    if (!supabaseBrowser) return;
+    await supabaseBrowser.auth.signOut();
+    setAuthMessage("");
+    setAuthMessageTone("info");
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <div className="mb-10 max-w-2xl">
@@ -168,9 +456,24 @@ export function CareerAppClient() {
         </h1>
         <p className="mt-2 text-muted">
           Pick a tool, add your context, and get structured output you can act
-          on today — no account wall, no generic PDFs.
+          on today. Sign in to save your resumes and generated work.
         </p>
       </div>
+
+      <AccountAndSavedWork
+        session={session}
+        authEmail={authEmail}
+        setAuthEmail={setAuthEmail}
+        authLoading={authLoading}
+        authMessage={authMessage}
+        authMessageTone={authMessageTone}
+        savedItems={savedItems}
+        savedLoading={savedLoading}
+        saveStatus={saveStatus}
+        onSignIn={signIn}
+        onSignOut={signOut}
+        onDelete={deleteSavedItem}
+      />
 
       <Tabs defaultValue="resume" className="w-full">
         <div className="overflow-x-auto pb-2 -mx-4 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
@@ -221,35 +524,239 @@ export function CareerAppClient() {
         </div>
 
         <TabsContent value="resume">
-          <ResumeTab />
+          <ResumeTab
+            canSave={canSave}
+            saveWork={saveWork}
+            getAccessToken={getAccessToken}
+          />
         </TabsContent>
         <TabsContent value="roadmap">
-          <RoadmapTab />
+          <RoadmapTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
         <TabsContent value="projects">
-          <ProjectsTab />
+          <ProjectsTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
         <TabsContent value="learning">
-          <LearningTab />
+          <LearningTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
         <TabsContent value="interview">
-          <InterviewPrepTab />
+          <InterviewPrepTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
         <TabsContent value="linkedin">
-          <LinkedInOptimizerTab />
+          <LinkedInOptimizerTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
         <TabsContent value="jdanalyzer">
-          <JdAnalyzerTab />
+          <JdAnalyzerTab canSave={canSave} saveWork={saveWork} getAccessToken={getAccessToken} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function ResumeTab() {
+function AccountAndSavedWork({
+  session,
+  authEmail,
+  setAuthEmail,
+  authLoading,
+  authMessage,
+  authMessageTone,
+  savedItems,
+  savedLoading,
+  saveStatus,
+  onSignIn,
+  onSignOut,
+  onDelete,
+}: {
+  session: Session | null;
+  authEmail: string;
+  setAuthEmail: (value: string) => void;
+  authLoading: boolean;
+  authMessage: string;
+  authMessageTone: AuthMessageTone;
+  savedItems: SavedCareerWork[];
+  savedLoading: boolean;
+  saveStatus: string;
+  onSignIn: () => Promise<void>;
+  onSignOut: () => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  return (
+    <section className="mb-8 grid gap-4 rounded-xl border border-border bg-card p-4 sm:p-5 lg:grid-cols-[0.85fr_1.15fr]">
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Save className="h-4 w-4 text-accent-secondary" />
+          <h2 className="text-sm font-semibold text-foreground">
+            Save your work
+          </h2>
+        </div>
+        {isSupabaseBrowserConfigured ? (
+          session ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                Signed in as{" "}
+                <span className="font-medium text-foreground">
+                  {session.user.email}
+                </span>
+                . New outputs save automatically.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSignOut}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm leading-relaxed text-muted">
+                Sign in with a magic link to save uploaded resumes and generated
+                results.
+              </p>
+              <form
+                className="flex flex-col gap-2 sm:flex-row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void onSignIn();
+                }}
+              >
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  disabled={authLoading}
+                  className="shrink-0"
+                >
+                  <LogIn className="h-4 w-4" />
+                  {authLoading ? "Sending…" : "Send link"}
+                </Button>
+              </form>
+              {authMessage ? (
+                <p
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm",
+                    authMessageTone === "error"
+                      ? "border-red-400/30 bg-red-400/10 text-red-200"
+                      : authMessageTone === "success"
+                        ? "border-accent-secondary/30 bg-accent-secondary/10 text-accent-secondary"
+                        : "border-border bg-card text-muted"
+                  )}
+                  role={authMessageTone === "error" ? "alert" : "status"}
+                  aria-live="polite"
+                >
+                  {authMessage}
+                </p>
+              ) : null}
+            </div>
+          )
+        ) : (
+          <p className="text-sm leading-relaxed text-muted">
+            Supabase is not configured yet. The tools still work, but saved work
+            and resume file storage unlock after you add the Supabase env vars.
+          </p>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold text-foreground">My Work</h2>
+          </div>
+          {savedLoading ? (
+            <span className="text-xs text-muted">Loading…</span>
+          ) : null}
+        </div>
+        {saveStatus ? (
+          <p
+            className={cn(
+              "mb-3 rounded-md border px-3 py-2 text-sm",
+              saveStatus.toLowerCase().includes("failed") ||
+                saveStatus.toLowerCase().includes("missing") ||
+                saveStatus.toLowerCase().includes("could not")
+                ? "border-red-400/30 bg-red-400/10 text-red-200"
+                : "border-accent-secondary/30 bg-accent-secondary/10 text-accent-secondary"
+            )}
+            role="status"
+          >
+            {saveStatus}
+          </p>
+        ) : null}
+        {session ? (
+          savedItems.length ? (
+            <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+              {savedItems.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-md border border-border bg-card px-3 py-2"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                        <span>{toolLabels[item.tool]}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDate(item.created_at)}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copySavedOutput(item)}
+                        className="h-8 px-2 text-xs text-muted hover:text-foreground"
+                      >
+                        Copy
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(item.id)}
+                        className="h-8 w-8 text-muted hover:text-red-300"
+                        aria-label={`Delete ${item.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted">
+              Saved outputs will appear here after you run a tool.
+            </p>
+          )
+        ) : (
+          <p className="text-sm leading-relaxed text-muted">
+            Sign in to see your saved resume reviews, roadmaps, LinkedIn
+            rewrites, JD analyses, and interview prep.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ResumeTab({ canSave, saveWork, getAccessToken }: CareerTabProps) {
   const [resume, setResume] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [output, setOutput] = useState("");
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [responseId, setResponseId] = useState(0);
@@ -263,9 +770,49 @@ function ResumeTab() {
     setResume("");
     setTargetRole("");
     setOutput("");
+    setResumeFileName("");
+    setUploadMessage("");
     setError("");
     setResponseId((n) => n + 1);
   }, []);
+
+  async function uploadResume(file: File | undefined) {
+    if (!file) return;
+    setError("");
+    setUploadMessage("");
+    setResumeFileName(file.name);
+    setUploadingResume(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const token = await getAccessToken();
+      const res = await fetch("/api/resume/parse", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        text?: string;
+        saved?: boolean;
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.text) {
+        setError(data.error ?? "Could not read that resume file.");
+        return;
+      }
+      setResume(data.text);
+      setUploadMessage(
+        data.saved
+          ? `${file.name} imported and saved.`
+          : data.message ?? `${file.name} imported.`
+      );
+    } catch {
+      setError("Upload failed. Try a PDF, DOCX, or TXT file.");
+    } finally {
+      setUploadingResume(false);
+    }
+  }
 
   async function analyze() {
     setError("");
@@ -283,6 +830,13 @@ function ResumeTab() {
         setOutput
       );
       if (!result.ok) setError(result.error);
+      if (result.ok && canSave) {
+        await saveWork({
+          tool: "resume",
+          input: { role: targetRole, resume },
+          output: result.text,
+        });
+      }
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
@@ -295,6 +849,47 @@ function ResumeTab() {
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
       <div className="space-y-4">
+        <div className="rounded-lg border border-dashed border-border bg-card p-4">
+          <Label htmlFor="resume-upload" className="flex items-center gap-2">
+            <UploadCloud className="h-4 w-4 text-accent-secondary" />
+            Upload resume
+          </Label>
+          <p className="mt-1 text-sm text-muted">
+            PDF, DOCX, or TXT. Compass will extract the text into the editor
+            below{canSave ? " and save the original file." : "."}
+          </p>
+          <div className="mt-3 flex min-h-10 items-center gap-3 rounded-md border border-border bg-card px-3 py-2">
+            <input
+              id="resume-upload"
+              type="file"
+              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              onChange={(e) => uploadResume(e.target.files?.[0])}
+              disabled={uploadingResume || loading}
+              className="sr-only"
+            />
+            <label
+              htmlFor="resume-upload"
+              className={cn(
+                "inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-card",
+                (uploadingResume || loading) &&
+                  "pointer-events-none opacity-60"
+              )}
+            >
+              Choose file
+            </label>
+            <span className="min-w-0 truncate text-sm text-foreground">
+              {resumeFileName || "No file chosen"}
+            </span>
+          </div>
+          {uploadMessage ? (
+            <p className="mt-2 text-sm text-accent-secondary" role="status">
+              {uploadMessage}
+            </p>
+          ) : null}
+          {uploadingResume ? (
+            <p className="mt-2 text-sm text-muted">Reading resume…</p>
+          ) : null}
+        </div>
         <div className="space-y-2">
           <Label htmlFor="resume-text">Resume text</Label>
           <Textarea
@@ -352,7 +947,7 @@ function ResumeTab() {
   );
 }
 
-function RoadmapTab() {
+function RoadmapTab({ canSave, saveWork }: CareerTabProps) {
   const [role, setRole] = useState("");
   const [skills, setSkills] = useState("");
   const [timeline, setTimeline] = useState("");
@@ -396,6 +991,13 @@ function RoadmapTab() {
         result.text
       );
       if (data?.months?.length) setMonths(data.months);
+      if (canSave) {
+        await saveWork({
+          tool: "roadmap",
+          input: { role, skills, timeline },
+          output: data?.months?.length ? { months: data.months } : result.text,
+        });
+      }
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -471,7 +1073,7 @@ function RoadmapTab() {
   );
 }
 
-function ProjectsTab() {
+function ProjectsTab({ canSave, saveWork }: CareerTabProps) {
   const [targetRole, setTargetRole] = useState("");
   const [stack, setStack] = useState("");
   const [level, setLevel] = useState("");
@@ -515,6 +1117,15 @@ function ProjectsTab() {
         result.text
       );
       if (data?.projects?.length) setProjects(data.projects);
+      if (canSave) {
+        await saveWork({
+          tool: "projects",
+          input: { role: targetRole, stack, level },
+          output: data?.projects?.length
+            ? { projects: data.projects }
+            : result.text,
+        });
+      }
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -594,7 +1205,7 @@ function ProjectsTab() {
   );
 }
 
-function LearningTab() {
+function LearningTab({ canSave, saveWork }: CareerTabProps) {
   const [goalRole, setGoalRole] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("");
   const [knowledge, setKnowledge] = useState("");
@@ -638,6 +1249,13 @@ function LearningTab() {
         result.text
       );
       if (data?.weeks?.length) setWeeks(data.weeks);
+      if (canSave) {
+        await saveWork({
+          tool: "learning",
+          input: { role: goalRole, hours: hoursPerWeek, level: knowledge },
+          output: data?.weeks?.length ? { weeks: data.weeks } : result.text,
+        });
+      }
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -726,7 +1344,7 @@ function LearningTab() {
   );
 }
 
-function InterviewPrepTab() {
+function InterviewPrepTab({ canSave, saveWork }: CareerTabProps) {
   const [targetRole, setTargetRole] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
@@ -764,6 +1382,17 @@ function InterviewPrepTab() {
         return;
       }
       setPrep(result.data);
+      if (canSave) {
+        await saveWork({
+          tool: "interview",
+          input: {
+            role: targetRole,
+            jd: jobDescription,
+            level: experienceLevel,
+          },
+          output: result.data,
+        });
+      }
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
@@ -842,7 +1471,7 @@ function InterviewPrepTab() {
   );
 }
 
-function LinkedInOptimizerTab() {
+function LinkedInOptimizerTab({ canSave, saveWork }: CareerTabProps) {
   const [targetRole, setTargetRole] = useState("");
   const [headline, setHeadline] = useState("");
   const [about, setAbout] = useState("");
@@ -892,6 +1521,18 @@ function LinkedInOptimizerTab() {
         return;
       }
       setOptimization(result.data);
+      if (canSave) {
+        await saveWork({
+          tool: "linkedin",
+          input: {
+            role: targetRole,
+            headline,
+            about,
+            experience,
+          },
+          output: result.data,
+        });
+      }
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
@@ -980,7 +1621,7 @@ function LinkedInOptimizerTab() {
   );
 }
 
-function JdAnalyzerTab() {
+function JdAnalyzerTab({ canSave, saveWork }: CareerTabProps) {
   const [role, setRole] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [analysis, setAnalysis] = useState<JdAnalysisData | null>(null);
@@ -1015,6 +1656,13 @@ function JdAnalyzerTab() {
         return;
       }
       setAnalysis(result.data);
+      if (canSave) {
+        await saveWork({
+          tool: "jdanalyzer",
+          input: { role, jd: jobDescription },
+          output: result.data,
+        });
+      }
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
